@@ -1,0 +1,882 @@
+---
+title: 'Hope hurts: Reference-dependent Preference Influences Yelp User''s Rating.'
+author: "David Min-heng Wang"
+date: "August 2020"
+output: pdf_document
+---
+
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(tinytex)
+options(tinytex.verbose = TRUE)
+
+```
+
+
+# Abstract
+
+Many people celebrate birthdays by visiting restaurants. Yet birthdays are not always a boon for businesses. This study analyzes Yelp online ratings and reviews to test a model of reference-dependent preferences. We investigate whether users tend to be more dissatisfied when consuming on their birthdays. The results confirm our speculations: compared to non-birthday visits, Yelp users gave lower ratings to their visits on birthdays. A variety of matching techniques are applied to ensure the effect is robust.
+
+
+# Introduction
+
+It is demonstrated that one's decision-making and behavior is influenced by reference point (DellaVigna, 2009; Kahneman & Tversky, 1979). **Expectation** is often used by people as the reference point. Higher or lower than people's expectations will affect people's performance (Mas, 2006; Ockenfels et al., 2015), tendency to breach the rules of soccer games (Bartling et al., 2015), risk attitudes (Koszegi & Rabin, 2007), future consumption (Koszegi & Rabin, 2009), labor supply (Abeler et al., 2011; Camerer et al., 1997; Crawford & Meng, 2011), and job satisfaction (Ockenfels et al., 2015). Except for the studies in behavioral economics mentioned above, studies in the fields of information system and psychology also come up with similar theories, such as expectation (dis)confirmation theory (Bhattacherjee, 2001; Oliver, 1977, 1980). The theory showed that one's expectation will directly influence the possibility of disconfirmation of beliefs, and further influence one's satisfaction. Hence, in this study, we suggest a seemingly counterintuitive phenomenon: *Hope hurts*. It is likely that consuming on special occasions, e.g. one's birthday, due to higher expectation than usual days, would not bring happiness but dissatisfaction.
+
+This research is an attempt to incorporate the matching methods in econometrics and text mining to test a well-known theory from behavioral economics: **a model of reference-dependent preferences (Koszegi & Rabin, 2006; ODonoghue & Sprenger, 2018)**. This model is an extension of noted behavioral decision theory called *prospect theory* (Kahneman & Tversky, 1979). It indicates that individual's overall utility is not solely determined by consumption experience, but also by one's reference level, like one's expectation as well. We employ econometric models and natural language processing techniques to glean valuable insights from review texts, combining with Yelp's user- (anonymous) and business-level information, to test whether the **expectation** of Yelp's user would affect one's rating for what they consumed.
+
+For clarify, the key formula in Koszegi and Rabin's (2006) paper is provided below:
+
+$$u(c|r) = m(c) + n(c|r), \ \ \\where \ \  n(c|r) = \mu(m(c) - m(r))$$
+
+c is the consumption bundle or level, and r is "reference" level or bundle.
+
+The term on the left side of the equation is the *overall utility* for a Yelp user. The first term on the right side m(c) is the *consumption utility*, indicating user's experience of service or quality; the second term on the right side of the equation called *gain-loss utility*, which is equal to $\mu$(m(c) - m(r)). The function $\mu$, called universal gain-loss function, satisfying the properties of value function, is the notion deriving from well-known prospect theory (Kahneman & Tversky, 1979). Apparently, if the term m(r), indicating one's reference point like *expectation*, is larger than m(c), this makes the value of $\mu$ negative, and creates perceived *losses* or dissatisfaction. Taking an extreme example, assuming mu is negative, and the absolute value of $\mu$ is large, it is likely that the overall utility could even become negative. This leads to very low rating for this consumption. In other words, your overall utility is not only based on what you actually consume, but also on how high the experience or quality you expect. For more background knowledge, it is worth briefly introducing prospect theory below.
+
+Prospect theory is one of the cornerstones for modern behavioral economics or psychology of decison-making and judgment (Kahneman & Tversky, 1979). The theory has several important properties: 1. individual's utility is not determined by final status (outcome), but also the *change* of the status-quo: whether the direction of change is positive or negative based on one's reference point, like *expectation*. 2. loss aversion, the same amount of "loss" causes stronger psychological impact than that of "gain". 3. gain status is a concave function (risk-averse), but loss status is a convex one (risk-seeking). 4. Framing effect matters: how the decision scenario is described influences individual's judgment and decision-making. Obviously, loss aversion is relevant to the gain-loss function $\mu$(m(c) - m(r)). If m(r) is larger than m(c), perceived losses emerge, which results in a lower overall utility.
+
+In the current research, we aim to investigate, for Yelp users, whether consuming in restaurants on ones' birthday would increase their "expectations", which causes lower ratings for the businesses they visited. It is likely that one expects much higher than usual (non-birthday occasions) days when today is one's birthday. Higher expectations lift up one's reference level before and when consuming, and finally results in dissatisfaction paradoxically. However, user's emotion is also a candidate as potential confounding. It is reasonable to forecast that people rate restaurants higher than they did it on usual days (non-birthdays) due to more delighted emotions. In order to rule out this alternative explanation, sentiment analysis is conducted to glean positive and negative words for each user's review on Yelp. These sentiment-based features are placed into the models as controlled covariates, and to examine whether this alters the empirical result. We hypothesize that people's rating for restaurants they visited on special occasions (in this case, one's birthday) would be influenced by the deviation of reference point ("higher" expectation). This would change one's overall experienced utility, and we use **review_star**, the rating on yelp on a scale from 1 to 5 (the larger the better), as the dependent variable to measure experienced utility in this research.
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+#library(png)
+#library(grid)
+#img0 <- readPNG("C:\\Users\\sssh307\\Desktop\\CMU Heinz PhD\\2020 Spring\\Econometric Theory\\Final Project\\Loss_Aversion.png")
+#grid.raster(img0)
+
+```
+
+By combining reference-dependent preferences and prospect theory, we speculate that Yelp users consumed on special days averagely give lower ratings to the restaurants than those did not consume on special occasions. Special days did not provide better experience, instead, higher expectations on these days *harm* users' experiences.
+
+# Data
+
+[Yelp Open Dataset](https://www.yelp.com/dataset) is used for this study, which contains JSON files and we use python to clean and finally transform them as csv files (business- and user-level information, such as how many reviews one leaves), txt files (review texts), and using ID as the key to merge them. We focus on the evaluation or rating for "restaurants", and discard any other kinds of rating. By locating those review texts contain **birthday** (we may include other special occasions or special days, like "anniversary", "commencement", and etc, in the future; but now, focus on review texts containing the term **birthday**). A dummy variable (used as treatment variable) *Special_Occasion* is created, indicating wehtehr the review contains the term **birthday** or not.
+
+There are many covariates about the user, such as user id, yelping_since (when joining in Yelp), friends (the IDs of the user's friends), useful (how many people consider the user's review "useful"), cool (how many people consider the user's review "cool"), funny (how many people consider the user's review "funny"), average_stars (the average score the user rate previously), review_count (how many reviews the user ever wrote), and so on. The review-relevant variables are selected as covariates in models we build.
+
+After data cleaning, there are 163,325 txt files (163,325 reviews texts per se), and one csv file contains information about users and businesses (restaurants). The two sets of files are merged by the key "review_id".
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE}
+library(readtext)
+library(tidyverse)
+library(quanteda)
+library(readxl)
+
+# user-level variables
+TwB <- read_excel("control_variable_all.xlsx")
+
+names(TwB); nrow(TwB)
+
+
+# user's past ratings for business (rater's inclination) 
+table(TwB$average_stars)
+# restaurant's scores (being rated)
+table(TwB$business_star)
+
+doc_categories <- TwB %>% 
+    select(review_id_new, user_id, ID, business_id, date, city, review_funny, review_useful,
+           review_cool, review_star, Special_Occasion, yelping_since, friends, useful,
+           cool, compliment_profile, user_review_count, average_stars, business_star, user_name, 
+           compliment_more, compliment_funny, compliment_hot, compliment_list,
+           elite, funny, compliment_photos, compliment_plain, compliment_writer,
+           compliment_note, compliment_cool, compliment_cute, fans)
+
+names(doc_categories)
+
+# review data txt files
+yelp_corpus <- corpus(readtext("full_data\\*.txt"))
+
+
+tokens <- tokens(yelp_corpus, what = "word", 
+                       remove_punct = T, remove_url = T,
+                       remove_numbers = T)
+
+tokens <- tokens_remove(tokens, pattern = stopwords('en'))
+
+yelp_dfm <- dfm(tokens)
+# Document-feature matrix of: 163,325 documents, 172,119 features (100.0% sparse)
+
+docvars(yelp_corpus) <- doc_categories
+docvars(yelp_dfm) <- docvars(yelp_corpus)
+docvars(tokens) <- docvars(yelp_corpus)
+
+subcorpus_SPO <- corpus_subset(yelp_corpus, Special_Occasion == 1 | Special_Occasion == 0)
+
+# table(subcorpus_SPO$Special_Occasion)
+
+SPO_dfm <- dfm_subset(yelp_dfm, Special_Occasion == 1 | Special_Occasion == 0)
+
+
+SPO_tokens <- tokens_subset(tokens, Special_Occasion == 1 | Special_Occasion == 0)
+
+```
+
+## Composition Analysis
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE}
+library(janitor)
+
+SOC.df <- data.frame(tokens = ntoken(SPO_tokens),
+                     types = ntype(SPO_tokens)) %>%
+                 mutate(Special_Occasion = docvars(subcorpus_SPO, "Special_Occasion")) %>%
+                 add_count(Special_Occasion, name = "Texts") %>%
+                 group_by(Special_Occasion, Texts) %>%
+                 summarise(Tokens = sum(tokens), Types = sum(types)) %>%
+                 adorn_totals("row")
+
+SOC.df
+
+```
+
+According to the composition analysis, the corpora have 163,325 review texts, 13,492,366 tokens, and 11,053,367 types (*unique* tokens) in total. In addition, we also further investigate the segmented composition under different levels of special occasions. For those texts including the term **birthday**, they contain 6286 texts, 522,616 tokens, and 427,745 types. For those text without this term, they contain 157,039 texts, 12,969,750 tokens, and 10,625,622 types.
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::kable(SOC.df[1:2, ], caption = 'A caption')
+```
+
+
+# Methods
+
+OLS regression and propensity score matching (Rosenbaum & Rubin, 1983) are both applied in this study. We want to examine whether the significant average causal effect could be detected under each model. In the first model, a series of covariates of user and business are controlled in the OLS regression, and the dummy *Special_Occasion* is used to detect whether higher expectation decrease the rating of restaurant. For the second model (PSM), it is used to make users in each group (treatment group: Special_Occasion is 1; control group: Special_Occasion is 0) as balanced as possible, which could minimize possible selection bias and improve observational studies' causal inference.
+
+The outcome variable *review_star* (rating for the restaurant) is a 5-point item: from 1 to 5, the higher the value, the better the rating of consumption experience this time. 
+
+In order to make use of the review (text) information, we use sentiment analysis (utilizing *Lexicoder Sentiment Dictionary*) and lexical complexity measures to create linguistic variables, such as positive or negative terms in a text, for each user. Of course, "whether one consumed on special days" (variable called *Special_Occasion* in data) is also created, indicating whether the review text contains the term **birthday**.
+
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE, eval = FALSE}
+## structural topic modeling
+#library(stm)
+
+#topic.count = 8
+#dfm_stm <- convert(yelp_dfm, to = "stm")
+#str(dfm_stm)
+
+
+
+#dfm_stm$meta
+#dfm_stm$vocab 
+#dfm_stm$document
+
+
+# remove infrequent terms
+#out <- prepDocuments(dfm_stm$document, dfm_stm$vocab, dfm_stm$meta, lower.thresh = 100)
+
+
+## memory.size() ### Checking your memory size
+# memory.limit(size= 56000)
+
+#model.stm <- stm(out$documents, out$vocab, K = topic.count, 
+ #                prevalence =~ Special_Occasion + review_funny + review_cool +
+  #                 review_useful + average_stars + factor(business_star) + compliment_writer + 
+   #                compliment_note,
+    #             data = out$meta, 
+     #            init.type = "Spectral") # this is the actual stm call
+
+
+#par(bty = "n",col = "grey40",lwd = 5)
+#plot.STM(model.stm, type = "summary", text.cex = 0.9)
+
+# Generate a set of words describing each topic from a fitted STM object
+#labelTopics(model.stm)
+
+# install.packages("stmBrowser")
+
+```
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE, eval = FALSE}
+# Estimating metadata/topic relationships
+#Yelp_special <- estimateEffect(1:8 ~ Special_Occasion + review_funny + review_cool +
+ #                    review_useful + average_stars + factor(business_star) + compliment_writer + 
+  #                   compliment_note, 
+   #              model.stm, meta = , uncertainty = 'Global'
+    #             )
+
+#summary(Yelp_special)
+
+```
+
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE}
+# read original texts
+#texts = readtext('full_data\\*.txt')
+# make sure it has the same length as the documents trained in model
+#texts_copy = texts
+#texts_copy = subset(texts_copy, doc_id %in% names(dfm_stm$documents))
+
+# display representative document content for specific topic
+#topic_4t <- findThoughts(model.stm.all, texts = texts_copy$text, topics = 4,
+ #                        n = 3, thresh = NULL, where = NULL,
+  #                       meta = NULL)
+
+#plotQuote(topic_4t$docs[[1]], width = 100, text.cex = 0.8, main = "Topic 4")
+
+#texts_copy$text[25019]
+#texts_copy$text[36147]
+#texts_copy$text[25022]
+```
+
+
+
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE}
+#par(bty = "n",col = "grey40",lwd = 2.5)
+#plot.STM(model.stm, type = "labels", topics = 1:8, text.cex = 0.8, width = 200)
+#plot.STM(model.stm, type = "hist", topics = 1:8)
+```
+
+
+
+```{r, echo = FALSE, warning = FALSE}
+## Topic Modeling Goodness-of-fit Measures
+#library(png)
+#library(grid)
+#img1 <- readPNG("C:\\Users\\sssh307\\Desktop\\CMU Heinz PhD\\2019_Fall\\Special Topic- Text Analysis\\Coffee-break-experiment 2\\K_search.png")
+#grid.raster(img1)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+#img2 <- readPNG("C:\\Users\\sssh307\\Desktop\\CMU Heinz PhD\\2019_Fall\\Special Topic- Text #Analysis\\Coffee-break-experiment 2\\topics.png")
+#grid.raster(img2)
+```
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+# useful for TRAINING, EVALUATING, AND INTERPRETING TOPIC MODELS
+# https://juliasilge.com/blog/evaluating-stm/
+
+#kResult <- searchK(dfm_stm$documents, dfm_stm$vocab, K = c(5:10), prevalence =~ Special_Occasion, data = dfm_stm$meta)
+
+#plot.searchK(kResult)
+# we choose number of topic = 8
+
+#kResult$results
+
+# the higher the value of exclusivity (and semantic coherence), the better the metrics. However, the two metrics are negatively correlated (trade-off). Hence, try to strike a balance between them. In this case, we choose K = 8.
+
+
+#m2 = stm(yelp_dfm, K = 8, prevalence =~ Special_Occasion, 
+#         max.em.its = 50, seed = 8458160)
+#summary(m2)
+
+# plot(m2, type = "summary", xlim = c(0, .45))
+
+#plot(m2, type = "perspectives", topics = c(1, 2))
+#plot(m2, type = "perspectives", topics = c(2, 3))
+#plot(m2, type = "perspectives", topics = c(3, 4))
+#plot(m2, type = "perspectives", topics = c(4, 5))
+#plot(m2, type = "perspectives", topics = c(5, 6))
+#plot(m2, type = "perspectives", topics = c(6, 7))
+#plot(m2, type = "perspectives", topics = c(7, 8))
+
+#prep <- estimateEffect(1:8 ~ Special_Occasion, stmobj = m2, meta = docvars(yelp_dfm))
+
+#summary(prep, topics = 1)
+#summary(prep, topics = 2)
+
+# https://cran.r-project.org/web/packages/ldatuning/vignettes/topics.html
+
+# library(ldatuning)
+# library(topicmodels)
+
+#result <- FindTopicsNumber(
+#  yelp_dfm,
+#  topics = seq(from = 2, to = 5, by = 1),
+#  metrics = c("Griffiths2004", "CaoJuan2009", "Arun2010", "Deveaud2014"),
+#  metrics = c("Griffiths2004"),
+#  method = "Gibbs",
+#  control = list(seed = 7),
+#  mc.cores = 2L,
+#  verbose = TRUE
+#)
+
+# plot the 
+#FindTopicsNumber_plot(result)
+
+
+#lda_model <- topicmodels::LDA(yelp_dfm, method = "Gibbs", k = 7)
+#terms(lda_model, 10)
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+#There are two purposes of the bottom-up approach analysis. First of all, by conducting topic modeling, this is not #only an exploratory analysis, but also promptly helps us understand **"what the main topics the Yelp users think and #comment"**, especially *topics relevant to special occasions*, which could provide us higher confidence in detecting #the effect of *expectation* in rating. We think what people discuss or comment highly correlate to their evaluation or #rating. Secondly, topic modeling is helpful for us to consider what may be omitted. For example, if there is a topic #correlated with "weather", this may also be a pivotal determinant of rating. 
+
+#However, the unsupervised learning technique require analyst to determine the number of topics generated. Hence, we #first use EM algorithm to search for the "best" (though this term may not precise enough) number of topics according #to relevant metrics, such as exclusivity and semantic coherence. After the output is generated, according to the #metrics, we decide to choose *8 topics* for topic modeing, and fortunately found that topic 1 is highly relevant to #*birthday*, terms like "wine", "birthday", "good", "us", etc are included. Moreover, topic 2 seems like about #*service*, topic 3, *kid*, topic 4, *food*, topic 5, *location*, topic 6, *junk food*, topic 7, *complaint*, and topic #8, *praise for the restaurant*. These topics give us a relatively intact picture of these review texts, which is not #only useful for us, but also for decision makers or restaurant owners to know what they did well and what there is #room for improvement.
+```
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+## KWIC: keywords-in-context
+#head(kwic(yelp_corpus, pattern = "birthday", window = 5, valuetype = "glob"), 10)
+```
+
+## sentiment analysis: using the "Lexicoder Sentiment Dictionary"
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE, message = FALSE}
+## check the Lexicoder Sentiment Dictionary ('LSD', for sentiment analysis)
+lengths(data_dictionary_LSD2015)
+
+toks_lsd <- tokens_lookup(tokens, dictionary =  data_dictionary_LSD2015)
+head(toks_lsd, 10)
+
+dfmat_lsd <- dfm(toks_lsd)
+head(dfmat_lsd, 10)
+
+nrow(dfmat_lsd)
+nrow(TwB)
+
+class(TwB)
+
+
+## incorporating NA (negative affect) and PA into yelp_dfm
+# docvars(yelp_dfm, c("negative", "positive")) <- dfmat_lsd[, c("negative", "positive")]
+# docvars(yelp_dfm)
+
+lsd_np <- dfmat_lsd[, c("negative", "positive")]
+
+lsd_np_df <- convert(lsd_np, to = "data.frame")
+
+TwB[, c("negative", "positive")] <- lsd_np_df[, c("negative", "positive")]
+
+# names(TwB)
+
+# Relative Proportional Difference; Sentiment = (P − N) / (P + N)
+# https://stackoverflow.com/questions/33543446/what-is-the-formula-of-sentiment-calculation
+TwB <- TwB %>%
+        mutate(sentiment_score = (positive - negative)/(positive + negative))
+
+## another method to score sentiment: logit  (Lowe et al., 2011)
+TwB <- TwB %>%
+        mutate(log_sentiment_score = log((positive + .5)/(negative + .5)))
+
+```
+
+The Lexicoder Sentiment Dictionary (Young & Soroka, 2012) is used for sentiment analysis, and calculate how many positive and negative terms exist for each review document. The sentiment score in each document is calculated by the formula $\frac{N(Positive Terms) - N(Negative Terms)}{N(Positive Terms) + N(Negative Terms)}$ (Laver & Gary, 2003; Liu, 2015; Lowe et al., 2011; Pak & Paroubek, 2010) and used as a linguistic controlled covariate in the models.
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE, message = FALSE}
+## lexical complexity
+# https://rdrr.io/cran/quanteda/man/textstat_lexdiv.html
+
+#dfmat_lc <- yelp_dfm %>% 
+#              textstat_lexdiv(measure = c("TTR", "CTTR", "K"))
+
+#TwB[, c("TTR", "CTTR", "K")] <- dfmat_lc[, c("TTR", "CTTR", "K")]
+
+#names(TwB)
+
+# We create three measures for lexical diversity, TTR, CTTR, and k.
+```
+
+# Results 
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE}
+suppressMessages(library(stargazer))
+```
+
+
+```{r, include = FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+
+# skim(TwB)
+# adding TTR feature when available
+
+mo0 <- lm(data = TwB, review_star ~ Special_Occasion)
+
+mo1 <- lm(data = TwB, review_star ~ Special_Occasion + log_sentiment_score)
+
+mo2 <- lm(data = TwB, review_star ~  Special_Occasion + log_sentiment_score + review_funny + 
+           review_cool + review_useful + average_stars)
+
+mo3 <- lm(data = TwB, review_star ~  Special_Occasion + log_sentiment_score + review_funny + 
+           review_cool + review_useful + average_stars + factor(business_star))
+
+mo4 <- lm(data = TwB, review_star ~ Special_Occasion + log_sentiment_score + review_funny + review_cool + review_useful + average_stars + factor(business_star) + compliment_writer + compliment_note)
+
+summary(mo0)
+summary(mo1)
+summary(mo2)
+summary(mo3)
+summary(mo4)
+
+```
+
+
+```{r, include = FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+library(knitr)
+library(texreg)
+models <- screenreg(list(mo0, mo1, mo2, mo3, mo4),
+              dcolumn = TRUE, booktabs = TRUE,
+              caption = "OLS models' results")
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+models
+
+#write.table(models, file = "C:\\Users\\sssh307\\Desktop\\models.txt", sep = ",", quote = FALSE, row.names = F)
+```
+
+We first run five OLS regression models to examine the effect of consuming on special days (user's birthday). Before the business-level covariate *business_star* included in models, the treatment dummy *Special_Occasion* is not correlated with the ratings of restaurants (*p* > .05). However, once the business-level covariate is accounted for, the treatment effect in model 3 ($\beta$ = -.034, *t*(14) = -2.333, *p* < .05) and model 4 ($\beta$ = -.032, *t*(14) = -2.194, *p* < .05), and the direction of effect meets the anticipation, which is negative. The results of OLS regression indicate that when the quality of business is accounted for, user's higher expectation on special days will paradoxically make themselves harder to be satisfied. This confirms our hypothesis, user's preference is reference-dependent, and the stronger the expectation one holds, the more likely one will be disappointed with this consumption. However, the data is observational in essence, the effectiveness of causal relationship is vulnerable to be threatened. Thus we turn to some matching methods, such as propensity score matching (Ho et al., 2007; Rosenbaum & Rubin, 1983; Rosenbaum, 2010) for help. 
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+# Propensity score weighting (IPTW) method
+library("WeightIt")
+library("cobalt")
+
+#TwB1 <- TwB
+
+# Propensity Score Weighting Using Generalized Linear Models
+W.outPS <- weightit(Special_Occasion ~ log_sentiment_score + review_funny + review_cool +   
+               review_useful + average_stars + business_star + compliment_writer 
+               + compliment_note, data = TwB, estimand = "ATT", method = "ps")
+
+# Propensity Score Weighting Using Generalized Boosted Models
+W.outGBM <- weightit(Special_Occasion ~ log_sentiment_score + review_funny + review_cool +   
+               review_useful + average_stars + business_star + compliment_writer 
+               + compliment_note,
+        data = TwB, method = "gbm", estimand = "ATT", stop.method = "ks.mean")
+
+
+bal.tab(W.outPS, m.threshold = .05, disp.v.ratio = TRUE)
+bal.tab(W.outGBM, m.threshold = .05, disp.v.ratio = TRUE)
+
+summary(W.outPS); summary(W.outGBM)
+
+
+
+TwB %>%
+  mutate(weights = get.w(W.outPS)) %>%
+  group_by(Special_Occasion) %>%
+  summarise(review_star_weighted = weighted.mean(review_star, weights),
+            n = n())
+
+TwB %>%
+  mutate(weights = get.w(W.outGBM)) %>%
+  group_by(Special_Occasion) %>%
+  summarise(review_star_weighted = weighted.mean(review_star, weights),
+            n = n())
+
+
+library("survey")
+d.w1 <- svydesign(ids = ~1, weights = W.outPS$weights,
+                     data = TwB)
+d.w2 <- svydesign(ids = ~1, weights = W.outGBM$weights,
+                     data = TwB)
+
+fit1 <- svyglm(review_star ~ Special_Occasion + sentiment_score + review_funny + review_cool +   
+               review_useful + average_stars + business_star + compliment_writer 
+               + compliment_note, design = d.w1)
+summary(fit1)
+
+fit2 <- svyglm(review_star ~ Special_Occasion + sentiment_score + review_funny + review_cool +   
+               review_useful + average_stars + business_star + compliment_writer 
+               + compliment_note, design = d.w2)
+summary(fit2)
+
+#Robust standard errors and confidence intervals
+library("jtools")
+summ(fit1, confint = TRUE, 
+     model.fit = FALSE, model.info = FALSE) 
+
+summ(fit2, confint = TRUE, 
+     model.fit = FALSE, model.info = FALSE) 
+
+```
+
+Then, we use IPTW approach (Austin, 2011; Austin & Stuart, 2015; Rosenbaum, 1987) to estimate treatment effect, and find expected results as well. When Yelp users consumed on one's birthday, their ratings for businesses are lower ($\beta$ = -.34, *t*(225) = -2.10, *p* = .036).
+
+```{r, echo = FALSE, echo = FALSE, warning = FALSE, message = FALSE}
+#library(twang)
+#library(lattice)
+
+## twang
+## n.trees, interaction.depth, and shrinkage are parameters for the gbm model
+
+## The 'stop.method' argument specifies a set (or sets) of rules and measures for assessing the
+## balance, or equivalence, established on the pretreatment covariates of the weighted treatment
+## and control groups.
+#class(TwB)
+
+# Propensity score estimation
+#ps.TwB <- ps(Special_Occasion ~ sentiment_score + review_funny + review_cool +   
+    #           review_useful + average_stars + business_star + compliment_writer 
+     #          + compliment_note, 
+      #          data = as.data.frame(TwB),
+       #         n.trees = 5000,
+        #        interaction.depth = 2,
+         #       shrinkage = 0.01,
+          #      perm.test.iters = 0,
+           #     stop.method = c("es.mean", "ks.max"),
+            #    estimand = "ATT",
+             #   verbose = FALSE)
+
+#plot(ps.TwB)
+
+
+## "relative influence"" of each variable for estimating the probability of treatment assignment.
+#summary(ps.TwB$gbm.obj, 
+  #      n.trees = ps.TwB$desc$ks.max.ATT$n.trees, 
+   #     plot = TRUE)
+
+# Assessing “balance” using balance tables
+#bal.table(ps.TwB)
+# 2 Graphical assessments of balance
+
+## illustrating the spread of the estimated propensity scores in the treatment and comparison groups 
+#plot(ps.TwB, plots = 3)
+
+
+```
+
+
+```{r, echo = FALSE, echo = FALSE, warning = FALSE, message = FALSE}
+#library(survey)
+
+#TwB$w <- get.weights(ps.TwB, stop.method = "ks.max")
+#design.ps <- svydesign(ids=~1, weights=~w, data = TwB)
+
+#glm1 <- svyglm(review_star ~ Special_Occasion, design = design.ps)
+
+#summary(glm1)
+
+```
+
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+## propensity score matching (PSM)
+# 1.Estimate the propensity score (the probability of being Speical Occasion given a set of pre-treatment covariates).
+# 2.Choose and execute a matching algorithm. i.e. nearest neighbor propensity score matching.
+# 4.Examine covariate balance after matching.
+# 5.Estimate treatment effects.
+library(MatchIt)
+
+TwB %>%
+  group_by(Special_Occasion) %>%
+  summarise(mean_review = mean(review_star))
+
+# Propensity Score estimation
+psm <- glm(Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful + average_stars +
+                     factor(business_star) + compliment_writer + compliment_note, 
+             family = binomial(), data = TwB)
+
+
+
+prs_df <- data.frame(pro_score = predict(psm, type = "response"),
+                     Special_Occasion = psm$model$Special_Occasion)
+
+# library(optmatch)
+# Performing a matching algorithm
+TwB_nomiss <- TwB %>%  # MatchIt does NOT allow NA
+                 select(Special_Occasion, sentiment_score, review_funny, review_cool, review_useful, 
+                       average_stars, business_star, compliment_more, compliment_funny, compliment_hot,
+                       compliment_list, funny, compliment_photos, compliment_plain, compliment_writer, 
+                       compliment_note, compliment_cool, compliment_cute, fans, review_star) %>%  
+                 na.omit()
+
+
+### propensity score matching ###
+# nearest neighbor (d(Xi,Xl) ~= 0)
+mod_match <- matchit(Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful + average_stars +
+                     factor(business_star) + compliment_writer + compliment_note,
+                       method = "nearest", data = TwB_nomiss, ratio = 1)
+
+# exact matching (d(Xi,Xl) = 0)
+exact_match <- matchit(Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful + average_stars +
+                     factor(business_star) + compliment_writer + compliment_note,
+                       method = "exact", data = TwB_nomiss, ratio = 1)
+
+
+# optimal matching
+#optimal_match <- matchit(Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful + average_stars +
+#                     factor(business_star) + compliment_writer + compliment_note,
+ #                      method = "optimal", data = TwB_nomiss, ratio = 1)
+
+
+# genetic matching
+#library(rgenoud)
+#genetic_match <- matchit(Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful + average_stars +
+#                     factor(business_star) + compliment_writer + compliment_note,
+ #                      method = "genetic", data = TwB_nomiss)
+
+# coarsened exact matching
+#cem_match <- matchit(Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful + average_stars +
+ #                    factor(business_star) + compliment_writer + compliment_note,
+  #                     method = "cem", data = TwB_nomiss)
+
+
+# summary(mod_match)
+# compare the distribution of propensity scores (distance) before and after matching.
+
+#summary(mod_match)
+#summary(exact_match)
+
+plot(mod_match,  type = "jitter", interactive = FALSE)
+plot(mod_match,  type = "hist")
+
+plot(exact_match,  type = "jitter", interactive = FALSE)
+plot(exact_match,  type = "hist")
+
+
+# To get matched-only observations
+matched_users <- match.data(mod_match, distance = "pscore"); dim(matched_users)
+exact_users <- match.data(exact_match); dim(exact_users)
+#optimal_users <- match.data(optimal_match); dim(optimal_users)
+#genetic_users <- match.data(genetic_match); dim(genetic_users)
+#cem_users <- match.data(cem_match); dim(cem_users)
+
+## Estimating treatment effects with Matched Samples (Nearest) ##
+mo_matched <- lm(data = matched_users, review_star ~ Special_Occasion)
+summary(mo_matched)
+#with(matched_users, t.test(review_star ~ Special_Occasion), paired = TRUE)
+
+## Estimating treatment effects with Matched Samples (Exact) ###
+exact_matched <- lm(data = exact_users, review_star ~ Special_Occasion)
+summary(exact_matched)
+
+### Estimating treatment effects with Matched Samples (Optimal) ###
+#optimal_matched <- lm(data = optimal_users, review_star ~ Special_Occasion)
+#summary(optimal_matched)
+
+### Estimating treatment effects with Matched Samples (Genetic) ###
+#genetic_matched <- lm(data = genetic_users, review_star ~ Special_Occasion)
+#summary(genetic_matched)
+
+### Estimating treatment effects with Matched Samples (CEM) ###
+#cem_matched <- lm(data = cem_users, review_star ~ Special_Occasion)
+#summary(cem_matched)
+
+
+
+
+# imbalance check (Nearest)
+imb_check <- glm(data = matched_users, Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful +
+                   average_stars + factor(business_star) + compliment_writer + compliment_note, family = binomial())
+
+summary(imb_check)
+
+
+#with(matched_users, t.test(positive_affect ~ Special_Occasion), paired = TRUE)
+#with(matched_users, t.test(review_funny ~ Special_Occasion), paired = TRUE)
+#with(matched_users, t.test(review_cool ~ Special_Occasion), paired = TRUE)
+#with(matched_users, t.test(review_useful ~ Special_Occasion), paired = TRUE)
+#with(matched_users, t.test(average_stars ~ Special_Occasion), paired = TRUE)
+#with(matched_users, t.test(business_star ~ Special_Occasion), paired = TRUE)
+#with(matched_users, t.test(compliment_writer ~ Special_Occasion), paired = TRUE)
+#with(matched_users, t.test(compliment_note ~ Special_Occasion), paired = TRUE)
+
+# imbalance check (Exact)
+exact_check <- glm(data = exact_users, Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful +
+                   average_stars + factor(business_star) + compliment_writer + compliment_note, family = binomial())
+
+summary(exact_check)
+
+#with(exact_users, t.test(positive_affect ~ Special_Occasion), paired = TRUE)
+#with(exact_users, t.test(review_funny ~ Special_Occasion), paired = TRUE)
+#with(exact_users, t.test(review_cool ~ Special_Occasion), paired = TRUE)
+#with(exact_users, t.test(review_useful ~ Special_Occasion), paired = TRUE)
+#with(exact_users, t.test(average_stars ~ Special_Occasion), paired = TRUE)
+#with(exact_users, t.test(business_star ~ Special_Occasion), paired = TRUE)
+#with(exact_users, t.test(compliment_writer ~ Special_Occasion), paired = TRUE)
+#with(exact_users, t.test(compliment_note ~ Special_Occasion), paired = TRUE)
+
+```
+
+```{r, include = FALSE, echo = FALSE, message = FALSE, warning = FALSE}
+# library(knitr)
+models2 <- screenreg(list(mo_matched, exact_matched),
+              dcolumn = TRUE, booktabs = TRUE,
+              caption = "Matcging Methods' results")
+
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+kable(models2)
+
+```
+
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+## plot covariate balance
+library(cobalt) # Covariate Balance Tables and Plots --> cobalt
+covba_nearest <- love.plot(mod_match, abs = F, var.order = "unadjusted", 
+          colors = c('red', 'blue'),
+          sample.names = c('unmatched', 'matched'), 
+          shapes = c('circle', 'triangle'))
+
+pa_n <- bal.plot(mod_match, var.name = "sentiment_score")
+rf_n <- bal.plot(mod_match, var.name = "review_funny")
+rc_n <- bal.plot(mod_match, var.name = "review_cool")
+ru_n <- bal.plot(mod_match, var.name = "review_useful")
+as_n <- bal.plot(mod_match, var.name = "average_stars")
+cw_n <- bal.plot(mod_match, var.name = "compliment_writer")
+cn_n <- bal.plot(mod_match, var.name = "compliment_note")
+
+
+library(gridExtra)
+grid.arrange(pa_n, rf_n, rc_n, ru_n,
+             as_n, cw_n, cn_n,
+             ncol = 2)
+
+
+
+covba_exact <- love.plot(exact_match, abs = F, var.order = "unadjusted", 
+          colors = c('red', 'blue'),
+          sample.names = c('unmatched', 'matched'), 
+          shapes = c('circle', 'triangle'))
+
+pa_e <- bal.plot(exact_match, var.name = "sentiment_score")
+rf_e <- bal.plot(exact_match, var.name = "review_funny")
+rc_e <- bal.plot(exact_match, var.name = "review_cool")
+ru_e <- bal.plot(exact_match, var.name = "review_useful")
+as_e <- bal.plot(exact_match, var.name = "average_stars")
+cw_e <- bal.plot(exact_match, var.name = "compliment_writer")
+cn_e <- bal.plot(exact_match, var.name = "compliment_note")
+
+grid.arrange(pa_e, rf_e, rc_e, ru_e,
+             as_e, cw_e, cn_e,
+             ncol = 2)
+
+
+## covariate balance the 2 algorithms
+grid.arrange(covba_nearest, covba_exact, ncol = 1)
+```
+
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+#install.packages('WeightIt')
+library(WeightIt)
+covs <- subset(TwB, select = c(sentiment_score, review_funny, review_cool, review_useful, average_stars, business_star, compliment_writer, compliment_note))
+
+#Generating propensity score weights for the ATT
+W.out <- weightit(Special_Occasion ~ covs, data = TwB,
+                  method = "ps", estimand = "ATT")
+
+# bal.tab(W.out)
+
+bal.plot(W.out, var.name = "prop.score", which = "both",
+         type = "histogram", mirror = TRUE)
+
+```
+
+For propensity score matching techniques with the assumption of conditional ignorability  ${Y(0), \ Y(1)} \perp D|X$ (Rosenbaum & Rubin, 1983), we apply two algorithms in this study, nearest neighbor and exact matching. Nearest neighbor matching strives to minimize the dissimilarity between **Xt** and **Xc**, which indicates $d(Xt,Xc) \cong 0$. The algorithm of exact matching is a special case, which implies $d(Xt,Xc) = 0$. In other words, exact matching requires that each untreated (control) unit has the *same* value on each observed covariates for matching with their treated counterpart. Considering the size of observation is very large (163,325 in total; treated: 6,286, and control: 157,039), and the number of observations in control group (untreated) is much larger than that in treated group. It is worth trying exact matching algorithm. After each treated observation are exactly matched, we further perform imbalance check for each matching algorithm. For nearest neighbor matching, all the covariates are statistically insignificant, and for exact matching, two covariates still reach statistically significant (review_useful and average_stars), but the mean differences are so small that they could be ignored. As for the average treatment effect for the treated (ATT) by nearest neighbor, special occasion (dummy variable indicating whether consumed on one's birthday) did significantly predict the rating of restaurant ($\beta$ = -.055, *t*(1) = -2.189, *p* < .05); for the average treatment effect for the treated (ATT) by exact matching, special occasion also significantly predict the rating of restaurant, and the magnitude of effect is much larger ($\beta$ = -.158, *t*(19) = -2.946, *p* < .01).
+
+When further examining the covariate balance plots and distributional balance for each covariate, it is obvious no matter which matching algorithm is selected, nearest neighbor or exact matching, the imbalances of covariates are significantly improved or almost perfectly corrected. It seems the *overt bias* (Rosenbaum, 2002), caused by observed covariates, is corrected. Under the assumption of conditional ignorability, we have more confidence in the observed effect of treatment. Nevertheless, there is a potential threat for causality should be assessed: the influence of unmeasured covariates on the odds of observations to be treated. Hence, it is time to check *hidden bias* (Rosenbaum 2002, 2004).
+
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE, message = FALSE}
+# sensitivity analysis for hidden bias
+library('Matching')
+library(rbounds)
+
+Y <- TwB$review_star
+Tr <- TwB$Special_Occasion
+
+pmodel <- glm(Special_Occasion ~ sentiment_score + review_funny + review_cool + review_useful + average_stars +
+                     business_star + compliment_writer + compliment_note,
+           family = binomial(), data = TwB)
+
+
+Match <- Match(Y = Y, Tr = Tr, 
+               X = pmodel$fitted, replace = FALSE)
+
+```
+
+```{r, message = FALSE, warning = FALSE}
+## Sensitivity Test
+# Rosenbaum Sensitivity Test for Wilcoxon Signed Rank P-Value
+psens(Match, Gamma = 2, GammaInc = 0.1)
+
+# Rosenbaum Sensitivity Test for Hodges-Lehmann Point Estimate
+hlsens(Match, Gamma = 2, GammaInc = 0.1)
+
+```
+
+
+In order to quantify hidden biases, a sensitivity analysis is performed. The parameter $\Gamma$ measures the degree of departure from random assignment of treatment (Rosenbaum, 2010). The relevant formula is as below:
+
+$$\frac{1}{\Gamma} \leq \frac{\pi_{i}(1 - \pi_{i})}{\pi_{j}(1 - \pi_{j})} \leq \Gamma$$
+
+If two subjects *i* and *j* have the same odds to receive treatment, for example, as random assignment is applied, $\Gamma$ will be equal to 1, where $x_{i} = x_{j}$. When subjects are the same on observed covariates, but $\Gamma$ gradually departs from 1, the two subjects' odds to be treated become more and more inequal. If results of hypothetical testing change when $\Gamma$ is around 1, this implies the study's results are relatively sensitive. A little departure caused by unmeasured covariate could influence the statistical inference. In our case, when $\Gamma$ becomes 1.1, the p-value's upper bound turns from statistically significant ((*p* = .000)) to insignificant (*p* = .807). This indicates that the ATT observed in our study is sensitive to hidden bias, though the imbalance of observed covariates is already minimized.
+
+
+```{r, include = FALSE, echo = FALSE, warning = FALSE}
+# running ordinal logit model for model 4, ans called it as ord_m4
+#library(MASS)
+#ord_TwB <- TwB
+#ord_TwB$stars_x <- factor(ord_TwB$stars_x)
+
+#ord_m4 <- polr(data = ord_TwB, stars_x ~ Special_Occasion + negative + positive + TTR +
+#           review_funny + review_cool + review_useful + average_stars, 
+#           Hess=TRUE)
+#summary(ord_m4)
+
+
+#ctable <- coef(summary(ord_m4))
+#p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
+#ctable <- cbind(ctable, "p value" = p)
+#ctable
+
+# confidence intervals
+#ci <- confint(ord_m4)
+#ci
+
+#exp(coef(ord_m4))
+
+## OR and CI
+#exp(cbind(OR = coef(ord_m4), ci))
+```
+
+
+We perform a series of OLS regression models (5 models), and further conduct propensity score matching to improve the condition of imbalance and strengthen the inference of causality. The results of this two approaches are discussed below.
+
+In OLS models, to predict user's rating for the restaurants (called "review_star"), we sequentially place the percent of positive affect on this review, the user's average rating, the restaurant's ratings (by users), and so forth, into the models as controlled covariates. The main focus in this study is the dummy variable (treatment variable) "Special_Occasion", we want to investigate whether consumption experience happened on special days, such as birthday, would significantly Yelp user's ratings of restaurant. The data is tortured and confesses to us: the answer is *Yes*!
+
+In addition, it is worth noting that the positivity in review texts has no effect on rating in all OLS models including this covariate. This denotes the alternative explanation that the state of affect is misattributed to the quality of comsumption, and influences user's rating is ruled out. The user's "average rating" of past reviews is also controlled for, and found that this covariate is positively correlated to one's rating. Intuitively speaking, if a user rates higher in the previous experiences of consumption, one will be more likely to offer higher rating in the current consumption. Though without any matching, some OLS models with business-level covariate still detect the anticipated effect. On average, Yelp users consumed on their birthdays did give lower ratings to the restaurants than those consumed on non-special days. 
+
+However, the data analyzed is essentially observational or non-experimental, potential selection bias exists. In order to minimize this bias, matching algorithms are employed to make observed covariates as balanced as possible to eliminate overt bias (Rosenbaum, 2002). Consequently, the imbalance is largely improved by either matching method. The average treatment effect of the treated (ATT) is significantly stronger than that without matching (OLS), especially the ATT estimated after conducting exact matching. In other words, matching techniques not only detect the treatment effect of special occasions as well, but also suggests the *stronger* treatment effect after minimizing the imbalance of observed covariates.
+
+
+# Discussion
+
+The dummy variable "special_occasions", which indicates whether the consumption happened on the days of special occasions (in this case, one's birthday), reaches statistically significant, and the negative coefficient implies if Yelp users consumed on special occasions, on average, their ratings for restaurants will be lower than those who consumed on non-special occasions. Because the positive sentiment revealed in texts has no effect in all the OLS models we ran, the possible alternative explanation that positive affect caused by special days influences rating is empirically ruled out. Rather, the anticipation of reference-dependent preferences (Koszegi & Rabin, 2006) is confirmed in the current study, the higher the expectation, the relatively lower rating will be offered, even if intuitively people usually go to better or higher-class restaurants on special days.
+
+In this study, by incorporating some linguistic features (user's positive sentiment) into the econometric model (OLS or PSM), we are a bit surprised that the linguistic variable(s), such as positive affect, is not predictive for the ratings on Yelp. For further analysis, some more creative linguistic variables could be created and put into regression models and test whether effects exist. Besides, in the OLS model, the ratings of the review which are rated by other Yelp users, such as review_funny, review_cool, and review_useful are all significant (*p* < .01). Interestingly, the usefulness of this review is negatively correlated with the level of rating, which may imply that reviews which help consumers avoid "bad restaurants" look more useful. However, whether the review is seen "cool" is positively associated to the level of rating: it is likely that people feel great or excited when they find "good restaurants" by browsing one's review. It is not easy to interpret why the relationships between funny and useful reviews and the level of rating are negative. Maybe "bad restaurants" are depicted hilarious or funny, or maybe other users just disagree with the review. Lastly, the user's average rating (for all one's previous rating in any restaurants) is positively correlated to the rating. This makes sense, on one hand, one tends to give higher rating may indicate one's scoring propensity; on the other hand, it is also likely that one has a good taste, hence, he or she usually goes to "good restaurants". Anyway, after controlling for all the predictors mentioned above sequentially , we still observe the effect of *expectation* ("Special_Occasion") exists and seems robust in OLS models.
+
+In conclusion, the hypothetical treatment effect is confirmed even after accounting for some controlled covariates or after matching. Individual's utility (measured by user's rating of restaurant) is not only dependent on what they consume, but also how high they expect! Considering on special days, people tend to consume in higher-class restaurants, this should also contribute to higher rating, however, the opposite happens: this consolidates why reference-based preference could explain this counterintuitive phenomenon, the higher the expectation of consumption, the more likely people will feel dissatisfied instead. As for alternative explanation, such as misattribution of individual's positive affect, is also ruled out by statistical control. In the end, the biggest lesson we learned from this study is that by incorporating theories from behavioral economics into text analysis and econometric models, we could broaden the scopes of social sciences and of computational sciences together. 
+
+# Reference
+######   Abeler, Johannes, Armin Falk, Lorenz Goette, and David Huffman. (2011). Reference Points and Effort Provision. *American Economic Review*, 101(2): 470–92.
+######   Bhattacherjee, Anol (2001). Understanding Information Systems Continuance: An Expectation-Confirmation Model. *MIS Quarterly*, 25(3): 351–370.
+######   Camerer, C., Babcock, L., Loewenstein, G. and Thaler, R. H. (1997). Labor supply of New York City cabdrivers: one day at a time, *Quarterly Journal of Economics*, 112(2), 407-442.
+######   Crawford, Vincent P., and Juanjuan Meng. 2011. New York City Cab Drivers’ Labor Supply Revisited: Reference-Dependent Preferences with Rational-Expectations Targets for Hours and Income. *American Economic Review*, 101(5): 1912–32
+######   DellaVigna, Stefano. (2009). "Psychology and Economics: Evidence from the Field." *Journal of Economic Literature*, 47(2): 315-72.
+######   Ho, D., Imai, K., King, G., & Stuart, E. (2007). Matching as Nonparametric Preprocessing for Reducing Model Dependence in Parametric Causal Inference. *Political Analysis*, 15(3), 199-236.
+######   Kahneman, Daniel & Amos Tversky. (1979). Prospect Theory: An Analysis of Decision under Risk, *Econometrica* 47, 263-291.
+######   Koszegi, Botond & Matthew Rabin. (2006). A Model of Reference-Dependent Preferences, *Quarterly Journal of Economics* 121, 1133-1165.
+######   Koszegi B, Rabin M (2007). Reference-dependent risk attitudes. American Economic Review. 97(4): 1047–1073.
+######   Koszegi B, Rabin M (2009). Reference-dependent consumption plans. American Economic Review. 99(3): 909–936.
+######   Laver, M., and J. Garry. 2000. Estimating Policy Positions from Political Texts. *American Journal of Political Science*, 44(3): 619–34.
+######   Liu, B. (2015). *Sentiment analysis: Mining opinions, sentiments, and emotions*. The Cambridge University Press
+######   Lowe, W., Benoit, K., Mikhaylov, S. & Laver, M. (2011) Scaling policy preferences from coded political texts. *Legislative Studies Quarterly*, 36:123–55. 
+######   Mas, Alexandre. (2006). Pay, Reference Points, and Police Performance. *Quarterly Journal of Economics*, 121(3): 783–821.
+######   Ockenfels A, Sliwka D, Werner P (2015). Bonus payments and reference point violations. Management Science. 61(7): 1496–1513.
+######   Oliver, Richard L. (1977). Effect of Expectation and Disconfirmation on Postexposure Product Evaluations - an Alternative Interpretation. *Journal of Applied Psychology*. 62(4): 480–486.
+######   Oliver, R. L. (1980). A Cognitive Model of the Antecedents and Consequences of Satisfaction Decisions. *Journal of Marketing Research*, 17(4), 460–469.
+######    Pak,A., & Paroubek, P. (2010). Twitter as a corpus for sentiment analysis and opinion mining. In Proceedings of LREC 2010 (pp. 1320–1326). Paris: European Language Resource Association. Retrieved November 5, 2010, from http://www.lrec-conf.org/proceedings/lrec2010/pdf/385_Paper.pdf.
+######    Peter C. Austin (2011) An Introduction to Propensity Score Methods for Reducing the Effects of Confounding in Observational Studies, *Multivariate Behavioral Research*, 46:(3), 399-424.
+######   Austin PC, Stuart EA. Moving towards best practice when using inverse probability of treatment weighting (IPTW) using the propensity score to estimate causal treatment effects in observational studies. *Statistics in Medicine*, 34(28):3661–3679.
+######   Rosenbaum, P. R., & Rubin, D. B. (1983). The Central Role of the Propensity Score in Observational Studies for Causal Effects, *Biometrih*, 70,41-55.
+######   Rosenbaum, P. R. (1987). Model-based direct adjustment. *The Journal of the American Statistician*, 82, 387–394.
+######   Rosenbaum, P. R. (2002). *Observational Studies*, Second Edition. New York, NY: Springer.
+######  Rosenbaum, P. R. (2004). Design Sensitivity in Observational Studies. *Biometrika* 91(1): 153-64.
+######   Rosenbaum, P. R. (2010). Design of observational studies. New York, NY: Springer-Verlag
+######   T. ODonoghue and C. Sprenger (2018). Reference-dependent preferences, *Handbook of Behavioral Economics-Foundations and Applications 1*.
+###### Young, L. & Soroka, S. (2012). Affective News: The Automated Coding of Sentiment in Political Texts, *Political Communication*, 29(2), 205-231
