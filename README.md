@@ -10,7 +10,7 @@ Topic Quotes from the most significant topic:
 
 ![topic quotes](https://github.com/xinkaichen97/YelpReviewTopicMining/blob/main/top_quotes_topic_4.png "Topic Quotes")
 
-Topic Propositions:
+Topic Proportions:
 
 ![topic proportions](https://github.com/xinkaichen97/YelpReviewTopicMining/blob/main/topic_proportions.PNG "Topic Proportions")
 
