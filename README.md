@@ -4,3 +4,6 @@
 
 Collobrate with [Min-heng Wang](https://www.linkedin.com/in/david-wang-2672ba56/)
 
+Some results:
+
+![topic propositions](https://github.com/xinkaichen97/YelpReviewTopicMining/blob/main/top%20topics%202.PNG, "Topic Propositions")
