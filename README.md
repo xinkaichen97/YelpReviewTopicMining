@@ -12,7 +12,7 @@ Topic Quotes from the most significant topic:
 
 Topic Propositions:
 
-![topic propositions](https://github.com/xinkaichen97/YelpReviewTopicMining/blob/main/topic_propositions.PNG "Topic Propositions")
+![topic proportions](https://github.com/xinkaichen97/YelpReviewTopicMining/blob/main/topic_proportions.PNG "Topic Proportions")
 
 Topic Correlations:
 
