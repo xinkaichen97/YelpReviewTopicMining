@@ -1,4 +1,5 @@
 # YelpReviewTopicMining
 
 Structural Topic Modelling using R
-Work with Min-heng Wang
+
+Collobrate with Min-heng Wang
