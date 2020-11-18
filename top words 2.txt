@@ -1,0 +1,40 @@
+Topic 1 Top Words:
+ 	 Highest Prob: n, place, like, can, get, good, go 
+ 	 FREX: parking, sometimes, mall, street, games, club, park 
+ 	 Lift: stink, djs, malls, arcade, jukebox, karaoke, nparking 
+ 	 Score: place, stink, always, food, love, location, parking 
+Topic 2 Top Words:
+ 	 Highest Prob: n, cheese, pizza, burger, fries, bread, sandwich 
+ 	 FREX: crust, bacon, pie, cake, chocolate, toast, pizza 
+ 	 Lift: christian, mascarpone, buttercream, provolone, frosting, croissant, crust 
+ 	 Score: cheese, pizza, burger, fries, chocolate, bread, sandwich 
+Topic 3 Top Words:
+ 	 Highest Prob: n, chicken, good, sauce, $, rice, salad 
+ 	 FREX: rice, noodles, curry, soup, broth, noodle, thai 
+ 	 Lift: excellence, panang, wonton, tonkatsu, basmati, vermicelli, paneer 
+ 	 Score: chicken, rice, sauce, soup, sushi, spicy, pork 
+Topic 4 Top Words:
+ 	 Highest Prob: n, $, get, service, car, one, back 
+ 	 FREX: car, company, gym, sales, email, vehicle, class 
+ 	 Lift: toyota, transmission, lease, mattress, plug, brakes, plumber 
+ 	 Score: car, plug, store, phone, told, sales, repair 
+Topic 5 Top Words:
+ 	 Highest Prob: n, time, great, hair, back, get, staff 
+ 	 FREX: nails, hair, salon, dr, nail, massage, pedicure 
+ 	 Lift: acrylic, brows, facials, groomer, hygienist, pedi, pedicures 
+ 	 Score: appointment, nails, hair, salon, massage, dr, nail 
+Topic 6 Top Words:
+ 	 Highest Prob: time, us, food, back, order, just, came 
+ 	 FREX: minutes, waitress, waited, table, us, asked, order 
+ 	 Lift: nite, poisoning, flagged, silverware, busser, inattentive, remade 
+ 	 Score: food, server, us, order, ordered, minutes, waitress 
+Topic 7 Top Words:
+ 	 Highest Prob: t, s, n, m, don, ve, didn 
+ 	 FREX: ve, n-, s, t, re, ll, don 
+ 	 Lift: temporary, xa0, biz_photos, www.yelp.com, ain, challenge-, slush 
+ 	 Score: t, s, don, m, ve, didn, temporary 
+Topic 8 Top Words:
+ 	 Highest Prob: great, food, service, good, menu, restaurant, amazing 
+ 	 FREX: tacos, wine, salsa, taco, mexican, burrito, atmosphere 
+ 	 Lift: servi, asada, carne, mojitos, queso, enchiladas, martinis 
+ 	 Score: food, great, delicious, menu, tacos, dinner, steak 
