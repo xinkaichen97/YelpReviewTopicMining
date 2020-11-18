@@ -1,6 +1,6 @@
 ---
 title: 'Hope hurts: Reference-dependent Preference Influences Yelp User''s Rating.'
-author: "David Min-heng Wang"
+author: "David Min-heng Wang, Xinkai Chen"
 date: "August 2020"
 output: pdf_document
 ---
