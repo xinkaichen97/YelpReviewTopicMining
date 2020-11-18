@@ -6,4 +6,4 @@ Collobrate with [Min-heng Wang](https://www.linkedin.com/in/david-wang-2672ba56/
 
 Some results:
 
-![topic quotes](https://github.com/xinkaichen97/YelpReviewTopicMining/blob/main/top_quotes_topic_4.png, "Topic Quotes")
+![topic quotes](https://github.com/xinkaichen97/YelpReviewTopicMining/blob/main/top_quotes_topic_4.png "Topic Quotes")
